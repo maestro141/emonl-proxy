@@ -3,11 +3,14 @@ const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Middleware to set CORS on all responses
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept, Referer');
-  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
   next();
 });
 
@@ -15,7 +18,9 @@ app.get('/', async (req, res) => {
   const target = req.query.url;
   const ref = req.query.ref || 'https://www.emonl.com/';
   if (!target || !target.startsWith('http')) {
-    return res.status(400).send('Invalid URL');
+    console.log('Invalid URL:', target);
+    res.status(400).send('Invalid URL');
+    return;
   }
 
   try {
@@ -30,13 +35,16 @@ app.get('/', async (req, res) => {
     });
 
     if (!response.ok) {
-      return res.status(response.status).send('Upstream error');
+      console.log('Upstream error:', response.status, target);
+      res.status(response.status).send('Upstream error');
+      return;
     }
 
     res.setHeader('Content-Type', response.headers.get('content-type') || 'application/octet-stream');
     res.setHeader('Content-Length', response.headers.get('content-length'));
     response.body.pipe(res);
   } catch (err) {
+    console.log('Proxy error:', err.message, target);
     res.status(500).send('Proxy error: ' + err.message);
   }
 });
